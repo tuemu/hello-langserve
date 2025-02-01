@@ -207,27 +207,3 @@ class RoleBasedCooperation:
         initial_state = AgentState(query=query)
         final_state = self.graph.invoke(initial_state, {"recursion_limit": 1000})
         return final_state["final_report"]
-#
-#
-# def main():
-#     import argparse
-#
-#     from settings import Settings
-#
-#     settings = Settings()
-#     parser = argparse.ArgumentParser(
-#         description="RoleBasedCooperationを使用してタスクを実行します"
-#     )
-#     parser.add_argument("--task", type=str, required=True, help="実行するタスク")
-#     args = parser.parse_args()
-#
-#     llm = ChatOpenAI(
-#         model=settings.openai_smart_model, temperature=settings.temperature
-#     )
-#     agent = RoleBasedCooperation(llm=llm)
-#     result = agent.run(query=args.task)
-#     print(result)
-#
-#
-# if __name__ == "__main__":
-#     main()
