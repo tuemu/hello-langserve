@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from langchain_openai import ChatOpenAI
 from langserve import add_routes
 from fastapi.middleware.cors import CORSMiddleware
-from app.role_based_cooperation.main import RoleBasedCooperation
+from app.agent.role_based_cooperation.main import RoleBasedCooperation
 from app.settings import Settings
 
 settings = Settings()

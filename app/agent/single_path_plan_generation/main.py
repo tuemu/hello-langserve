@@ -1,6 +1,4 @@
-import operator
-from datetime import datetime
-from typing import Annotated, Any
+from typing import Any
 
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_core.output_parsers import StrOutputParser
@@ -8,55 +6,13 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import create_react_agent
+
+from agent.single_path_plan_generation.model.decomposed_tasks import DecomposedTasks
+from agent.single_path_plan_generation.query_decomposer import QueryDecomposer
+from agent.single_path_plan_generation.state.single_path_plan_generation_state import SinglePathPlanGenerationState
 from app.passive_goal_creator.main import Goal, PassiveGoalCreator
 from app.prompt_optimizer.main import OptimizedGoal, PromptOptimizer
-from pydantic import BaseModel, Field
 from app.response_optimizer.main import ResponseOptimizer
-
-
-class DecomposedTasks(BaseModel):
-    values: list[str] = Field(
-        default_factory=list,
-        min_items=3,
-        max_items=5,
-        description="3~5個に分解されたタスク",
-    )
-
-
-class SinglePathPlanGenerationState(BaseModel):
-    query: str = Field(..., description="ユーザーが入力したクエリ")
-    optimized_goal: str = Field(default="", description="最適化された目標")
-    optimized_response: str = Field(
-        default="", description="最適化されたレスポンス定義"
-    )
-    tasks: list[str] = Field(default_factory=list, description="実行するタスクのリスト")
-    current_task_index: int = Field(default=0, description="現在実行中のタスクの番号")
-    results: Annotated[list[str], operator.add] = Field(
-        default_factory=list, description="実行済みタスクの結果リスト"
-    )
-    final_output: str = Field(default="", description="最終的な出力結果")
-
-
-class QueryDecomposer:
-    def __init__(self, llm: ChatOpenAI):
-        self.llm = llm
-        self.current_date = datetime.now().strftime("%Y-%m-%d")
-
-    def run(self, query: str) -> DecomposedTasks:
-        prompt = ChatPromptTemplate.from_template(
-            f"CURRENT_DATE: {self.current_date}\n"
-            "-----\n"
-            "タスク: 与えられた目標を具体的で実行可能なタスクに分解してください。\n"
-            "要件:\n"
-            "1. 以下の行動だけで目標を達成すること。決して指定された以外の行動をとらないこと。\n"
-            "   - インターネットを利用して、目標を達成するための調査を行う。\n"
-            "2. 各タスクは具体的かつ詳細に記載されており、単独で実行ならびに検証可能な情報を含めること。一切抽象的な表現を含まないこと。\n"
-            "3. タスクは実行可能な順序でリスト化すること。\n"
-            "4. タスクは日本語で出力すること。\n"
-            "目標: {query}"
-        )
-        chain = prompt | self.llm.with_structured_output(DecomposedTasks)
-        return chain.invoke({"query": query})
 
 
 class TaskExecutor:
@@ -179,26 +135,26 @@ class SinglePathPlanGeneration:
         return final_state.get("final_output", "Failed to generate a final response.")
 
 
-def main():
-    import argparse
-
-    from settings import Settings
-
-    settings = Settings()
-
-    parser = argparse.ArgumentParser(
-        description="SinglePathPlanGenerationを使用してタスクを実行します"
-    )
-    parser.add_argument("--task", type=str, required=True, help="実行するタスク")
-    args = parser.parse_args()
-
-    llm = ChatOpenAI(
-        model=settings.openai_smart_model, temperature=settings.temperature
-    )
-    agent = SinglePathPlanGeneration(llm=llm)
-    result = agent.run(args.task)
-    print(result)
-
-
-if __name__ == "__main__":
-    main()
+# def main():
+#     import argparse
+#
+#     from settings import Settings
+#
+#     settings = Settings()
+#
+#     parser = argparse.ArgumentParser(
+#         description="SinglePathPlanGenerationを使用してタスクを実行します"
+#     )
+#     parser.add_argument("--task", type=str, required=True, help="実行するタスク")
+#     args = parser.parse_args()
+#
+#     llm = ChatOpenAI(
+#         model=settings.openai_smart_model, temperature=settings.temperature
+#     )
+#     agent = SinglePathPlanGeneration(llm=llm)
+#     result = agent.run(args.task)
+#     print(result)
+#
+#
+# if __name__ == "__main__":
+#     main()
