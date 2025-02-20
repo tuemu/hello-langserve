@@ -1,6 +1,9 @@
+import copy
+
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
+from langgraph.types import Send
 
 from app.agent.node.executor import Executor
 from app.agent.node.planner import Planner
@@ -18,6 +21,15 @@ class RoleBasedCooperation:
         self.reporter = Reporter(llm=llm)
         self.graph = self._create_graph()
 
+    @staticmethod
+    def _create_send_object(state: AgentState, index: int) -> Send:
+        updated_state = copy.deepcopy(state)
+        updated_state.current_task_index = index
+        return Send('executor', updated_state)
+
+    def _routing_parallel_node(self, state: AgentState) -> list[Send]:
+        return [self._create_send_object(state, index) for index in range(len(state.tasks))]
+
     def _create_graph(self) -> CompiledStateGraph:
         workflow = StateGraph(AgentState)
 
@@ -27,40 +39,9 @@ class RoleBasedCooperation:
         workflow.add_node("reporter", self.reporter.run)
 
         workflow.set_entry_point("planner")
-
         workflow.add_edge("planner", "role_assigner")
-        workflow.add_edge("role_assigner", "executor")
-        workflow.add_conditional_edges(
-            "executor",
-            lambda state: state.current_task_index < len(state.tasks),
-            {True: "executor", False: "reporter"},
-        )
-
+        workflow.add_conditional_edges('role_assigner', self._routing_parallel_node, ['executor'])
+        workflow.add_edge("executor", "reporter")
         workflow.add_edge("reporter", END)
 
         return workflow.compile()
-
-    # def _plan_tasks(self, state: AgentState) -> dict[str, Any]:
-    #     tasks = self.planner.run(query=state.query)
-    #     return {"tasks": tasks}
-
-    # def _assign_roles(self, state: AgentState) -> dict[str, Any]:
-    #     tasks_with_roles = self.role_assigner.run(tasks=state.tasks)
-    #     return {"tasks": tasks_with_roles}
-
-    # def _execute_task(self, state: AgentState) -> dict[str, Any]:
-    #     current_task = state.tasks[state.current_task_index]
-    #     result = self.executor.run(task=current_task)
-    #     return {
-    #         "results": [result],
-    #         "current_task_index": state.current_task_index + 1,
-    #     }
-
-    # def _generate_report(self, state: AgentState) -> dict[str, Any]:
-    #     report = self.reporter.run(query=state.query, results=state.results)
-    #     return {"final_report": report}
-
-    # def run(self, query: str) -> str:
-    #     initial_state = AgentState(query=query)
-    #     final_state = self.graph.invoke(initial_state, {"recursion_limit": 1000})
-    #     return final_state["final_report"]

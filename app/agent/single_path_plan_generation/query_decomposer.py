@@ -11,7 +11,7 @@ class QueryDecomposer:
         self.llm = llm
         self.current_date = datetime.now().strftime("%Y-%m-%d")
 
-    def run(self, query: str) -> DecomposedTasks:
+    def run(self, query: str, language_code: str) -> DecomposedTasks:
         prompt = ChatPromptTemplate.from_template(
             f"CURRENT_DATE: {self.current_date}\n"
             "-----\n"
@@ -21,7 +21,7 @@ class QueryDecomposer:
             "   - インターネットを利用して、目標を達成するための調査を行う。\n"
             "2. 各タスクは具体的かつ詳細に記載されており、単独で実行ならびに検証可能な情報を含めること。一切抽象的な表現を含まないこと。\n"
             "3. タスクは実行可能な順序でリスト化すること。\n"
-            "4. タスクは日本語で出力すること。\n"
+            f"但し、言語コード:<{language_code}>の言語で必ず回答すること。"
             "目標: {query}"
         )
         chain = prompt | self.llm.with_structured_output(DecomposedTasks)

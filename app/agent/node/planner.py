@@ -16,7 +16,7 @@ class Planner(AbstractNode):
     def run(self, state: AgentState) -> dict[str, Any]:
         print(f"Planner is run with state: {state}")
 
-        decomposed_tasks: DecomposedTasks = self.query_decomposer.run(query=state.query)
+        decomposed_tasks: DecomposedTasks = self.query_decomposer.run(query=state.query, language_code=state.language)
         tasks = [Task(description=task) for task in decomposed_tasks.values]
         return {
             "tasks": tasks

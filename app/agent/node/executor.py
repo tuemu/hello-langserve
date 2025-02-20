@@ -16,7 +16,9 @@ class Executor(AbstractNode):
         self.base_agent = create_react_agent(self.llm, self.tools)
 
     def run(self, state: AgentState) -> dict[str, Any]:
-        task = state.tasks[state.current_task_index]
+        print(f"Executor is run with state: {state}")
+        current_task_index = state.current_task_index
+        task = state.tasks[current_task_index]
         result = self.base_agent.invoke(
             {
                 "messages": [
@@ -26,7 +28,8 @@ class Executor(AbstractNode):
                             f"あなたは{task.role.name}です。\n"
                             f"説明: {task.role.description}\n"
                             f"主要なスキル: {', '.join(task.role.key_skills)}\n"
-                            "あなたの役割に基づいて、与えられたタスクを最高の能力で遂行してください。"
+                            "あなたの役割に基づいて、与えられたタスクを最高の能力で遂行してください。\n"
+                            f"但し、言語コード:<{state.language}>の言語で必ず回答すること。"
                         ),
                     ),
                     (
@@ -36,8 +39,8 @@ class Executor(AbstractNode):
                 ]
             }
         )
-        answer = result["messages"][-1].content
+        result = result["messages"][-1].content
         return {
-            "results": [answer],
-            "current_task_index": state.current_task_index + 1,
+            "results": [result],
+            "executed_task_numbers": [current_task_index]
         }
